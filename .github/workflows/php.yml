@@ -43,5 +43,6 @@ jobs:
         run: php index.php
 name: OCI ARM Instance Creator
 'on':
+  workflow_dispatch:
   schedule:
     - cron: '*/10 * * * *'
