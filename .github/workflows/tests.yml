@@ -1,63 +1,47 @@
-name: Tests
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
-  schedule:
-   - cron: '*/5 * * * *'
-
+---
 jobs:
-  tests:
+  create-instance:
+    name: Try to create OCI ARM instance
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        php-versions: ['8.3']
-    name: integration-tests (PHP ${{ matrix.php-versions }})
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Install PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-versions }}
-      - name: Validate composer.json and composer.lock
+          php-version: '7.4'
+      - name: Validate composer.json
         run: composer validate
-
-      - name: Get Composer Cache Directory
-        id: composer-cache
-        run: |
-          echo "::set-output name=dir::$(composer config cache-files-dir)"
-      - uses: actions/cache@v2
+      - id: composer-cache
+        name: Get Composer Cache Directory
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
         with:
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-${{ matrix.php-version }}-composer-${{ matrix.dependencies }}-${{ hashFiles('**/composer.lock') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.php-version }}-composer-${{ matrix.dependencies }}-
+            ${{ runner.os }}-composer-
 
       - name: Install dependencies
-        run: |
-          composer update --prefer-dist --no-progress
-      - name: Run test script
-        run: |
-          php index.php
-        env:
-          OCI_REGION: ${{ secrets.OCI_REGION }}
-          OCI_USER_ID: ${{ secrets.OCI_USER_ID }}
-          OCI_TENANCY_ID: ${{ secrets.OCI_TENANCY_ID }}
-          OCI_KEY_FINGERPRINT: ${{ secrets.OCI_KEY_FINGERPRINT }}
-          OCI_PRIVATE_KEY_FILENAME: ${{ secrets.OCI_PRIVATE_KEY_FILENAME }}
+        run: composer update --prefer-dist --no-progress
+      - env:
           OCI_AVAILABILITY_DOMAIN: ${{ secrets.OCI_AVAILABILITY_DOMAIN }}
-          OCI_SUBNET_ID: ${{ secrets.OCI_SUBNET_ID }}
           OCI_IMAGE_ID: ${{ secrets.OCI_IMAGE_ID }}
-          OCI_OCPUS: ${{ secrets.OCI_OCPUS }}
-          OCI_MEMORY_IN_GBS: ${{ secrets.OCI_MEMORY_IN_GBS }}
-          OCI_SHAPE: ${{ secrets.OCI_SHAPE }}
+          OCI_KEY_FINGERPRINT: ${{ secrets.OCI_KEY_FINGERPRINT }}
           OCI_MAX_INSTANCES: ${{ secrets.OCI_MAX_INSTANCES }}
+          OCI_MEMORY_IN_GBS: ${{ secrets.OCI_MEMORY_IN_GBS }}
+          OCI_OCPUS: ${{ secrets.OCI_OCPUS }}
+          OCI_PRIVATE_KEY_FILENAME: ${{ secrets.OCI_PRIVATE_KEY_FILENAME }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+          OCI_SHAPE: ${{ secrets.OCI_SHAPE }}
           OCI_SSH_PUBLIC_KEY: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
-          TELEGRAM_USER_ID: ${{ secrets.TELEGRAM_USER_ID }}
+          OCI_SUBNET_ID: ${{ secrets.OCI_SUBNET_ID }}
+          OCI_TENANCY_ID: ${{ secrets.OCI_TENANCY_ID }}
+          OCI_USER_ID: ${{ secrets.OCI_USER_ID }}
           TELEGRAM_BOT_API_KEY: ${{ secrets.TELEGRAM_BOT_API_KEY }}
-
+          TELEGRAM_USER_ID: ${{ secrets.TELEGRAM_USER_ID }}
+        name: Run script
+        run: php index.php
+name: OCI ARM Instance Creator
+'on':
+  schedule:
+    - cron: '*/10 * * * *'
